@@ -6,15 +6,16 @@ How Europa Universalis IV's land units and technology evolve, read straight from
 - **Military units:** the strongest infantry, cavalry and artillery each unit group can recruit at every mil tech level (total pips, groups side by side), what mil tech multiplies (fire/shock damage, morale, tactics, combat width), and every unit of a group with its six pips on the mil tech axis.
 - **Adm / Dip / Mil tech:** each effect's value at every level, by the year the game expects it, plus what each level unlocks.
 
-Live at https://eu4tech.jane.berlin/ (the cog button on eu4.jane.berlin leads here; the old address https://vic3tech.jane.berlin/eu4/ redirects). `deploy.sh` uploads the page on every deploy, and `data.json` only from a full local deploy, since only a machine with EU4 installed can generate it. It shares no code with the Vic3 page, so it can move to its own repo as a folder.
+Live at https://eu4tech.jane.berlin/ (the cog button on eu4.jane.berlin leads here; the old address https://vic3tech.jane.berlin/eu4/ redirects). A push to `main` uploads the page through GitHub Actions; the game data (`data.json`, `countries.json`, `missions.json`, `ideas.json`, `flags/`) only goes up from a full local deploy (`./deploy.sh`), since only a machine with EU4 installed can generate it. The page started in the [vic3tech](https://github.com/jane-natucci/vic3tech) repo and shares no code with it.
 
 ```bash
-ruby eu4tech/extract_countries.rb   # countries.json, missions.json, ideas.json and flags/ (also gitignored)
-ruby eu4tech/extract.rb       # writes eu4tech/data.json from the default Steam install (gitignored: Paradox's data)
-bundle exec ruby -run -e httpd . -p 8000   # then open http://localhost:8000/eu4tech/
+ruby extract.rb             # writes data.json from the default Steam install (gitignored: Paradox's data)
+ruby extract_countries.rb   # countries.json, missions.json, ideas.json and flags/ (also gitignored)
+./deploy.sh                 # full deploy: page, data and flags
+bundle exec ruby -run -e httpd . -p 8000   # then open http://localhost:8000/
 ```
 
-`extract.rb` takes the game path as its first argument if EU4 is installed elsewhere. Re-run it after a game patch.
+Both extractors take the game path as their first argument if EU4 is installed elsewhere. Re-run it after a game patch.
 
 ## How the numbers work
 

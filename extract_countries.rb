@@ -1,12 +1,12 @@
-# Reads a local Europa Universalis IV install and writes eu4tech/countries.json (and a
-# small flag PNG per country in eu4tech/flags/): for every country and every bookmark
+# Reads a local Europa Universalis IV install and writes countries.json (and a
+# small flag PNG per country in flags/): for every country and every bookmark
 # date, what it is made of at that start -- government, religion, ruler and heir with
 # their adm/dip/mil, provinces and development, trade goods, rivals, friends and
 # diplomatic ties -- straight from history/countries, history/provinces and
-# history/diplomacy. Self-contained, like extract.rb.
+# history/diplomacy.
 #
-#   ruby eu4tech/extract_countries.rb                  # default Steam install on macOS
-#   ruby eu4tech/extract_countries.rb "/path/to/Europa Universalis IV"
+#   ruby extract_countries.rb                  # default Steam install on macOS
+#   ruby extract_countries.rb "/path/to/Europa Universalis IV"
 #
 # The output is Paradox's game data, so it's gitignored, never committed.
 # Needs ImageMagick (`magick`) only for the flags.
@@ -311,7 +311,7 @@ end
 File.write(File.join(__dir__, "missions.json"), JSON.generate(trees: trees, by_tag: by_tag))
 mission_series = trees
 by_tag_count = by_tag.size
-puts "Wrote eu4tech/missions.json: #{trees.size} mission trees for #{by_tag.size} countries, #{trees.values.sum { |t| t[:missions].size }} missions (#{File.size(File.join(__dir__, 'missions.json')) / 1024} KB)"
+puts "Wrote missions.json: #{trees.size} mission trees for #{by_tag.size} countries, #{trees.values.sum { |t| t[:missions].size }} missions (#{File.size(File.join(__dir__, 'missions.json')) / 1024} KB)"
 
 # --- National ideas: <TAG>_ideas with traditions (start), ambition (bonus) and seven ideas -------------------
 # EU4 has no table saying how a modifier's number is shown, so which are percentages is a
@@ -351,7 +351,7 @@ Dir[File.join(GAME, "common/ideas/*.txt")].sort.each do |f|
   end
 end
 File.write(File.join(__dir__, "ideas.json"), JSON.generate(by_tag: ideas))
-puts "Wrote eu4tech/ideas.json: national ideas for #{ideas.size} countries (#{File.size(File.join(__dir__, 'ideas.json')) / 1024} KB)"
+puts "Wrote ideas.json: national ideas for #{ideas.size} countries (#{File.size(File.join(__dir__, 'ideas.json')) / 1024} KB)"
 
 version = read(File.join(GAME, "launcher-settings.json"))[/"rawVersion":\s*"v?([^"]+)"/, 1] rescue nil
 File.write(OUT, JSON.generate(game_version: version, generated_at: Time.now.utc.iso8601, dates: BOOKMARKS, tech_groups: tech_groups, names: names, countries: list))

@@ -1,10 +1,8 @@
-# Reads a local Europa Universalis IV install and writes eu4tech/data.json: every
+# Reads a local Europa Universalis IV install and writes data.json: every
 # land unit with its pips, and what each military tech level adds and
-# unlocks. Self-contained -- shares nothing with the Vic3 page, so this
-# folder can move to another app as is.
-#
-#   ruby eu4tech/extract.rb                      # default Steam install on macOS
-#   ruby eu4tech/extract.rb "/path/to/Europa Universalis IV"
+# unlocks. #
+#   ruby extract.rb                      # default Steam install on macOS
+#   ruby extract.rb "/path/to/Europa Universalis IV"
 #
 # The output is Paradox's game data, so it's gitignored, never committed.
 require "json"

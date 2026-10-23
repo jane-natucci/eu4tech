@@ -1,0 +1,8 @@
+# Generated from Paradox's game files by extract.rb and extract_countries.rb --
+# deployed to the site, never committed (it's Paradox's data, names and art).
+/data.json
+/countries.json
+/missions.json
+/ideas.json
+/flags/
+.DS_Store
