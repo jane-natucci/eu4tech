@@ -103,6 +103,12 @@
     .mnode.sel rect { fill: var(--accent-soft); stroke-width: 2.5; }
     .mnode text { fill: var(--ink); font-size: 11px; text-anchor: start; pointer-events: none; }
     .medge { fill: none; stroke: var(--muted); stroke-width: 1.6; opacity: 0.7; }
+    .mcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 24px; }
+    .mcols h4 { margin: 4px 0; font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: normal; }
+    ul.lines { margin: 0; padding-left: 1.1em; font-size: 0.88em; }
+    ul.lines ul.lines { margin-top: 2px; }
+    ul.lines li { margin: 2px 0; }
+    #mdetail { max-height: 55vh; overflow-y: auto; scrollbar-width: thin; }
     #mdetail { position: sticky; bottom: 10px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 16px; margin-top: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.18); }
     .idea { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
     .idea h3 { font-size: 1.02em; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
@@ -480,11 +486,19 @@
       showMission();
     }
     function wrap(text, n) { const out = []; let line = ""; for (const w of text.split(" ")) { if ((line + " " + w).trim().length > n && line) { out.push(line); line = w; } else line = (line + " " + w).trim(); } out.push(line); return out.slice(0, 3); }
+    const lineList = ls => `<ul class="lines">${ls.map(x => Array.isArray(x) ? `<li>${esc(x[0])}${lineList(x[1])}</li>` : `<li>${esc(x)}</li>`).join("")}</ul>`;
     function showMission() {
       const box = document.getElementById("mdetail"); if (!box) return;
-      const m = missionSel && Object.values(MD.trees).flatMap(t => t.missions).find(x => x.key === missionSel);
+      const all = Object.values(MD.trees).flatMap(t => t.missions);
+      const m = missionSel && all.find(x => x.key === missionSel);
       box.hidden = !m;
-      if (m) box.innerHTML = `<h3 style="margin-bottom:2px;display:flex;align-items:center;gap:10px">${m.icon ? `<img src="icons/missions/${m.icon}.png" alt="" width="40" height="42">` : ""}${esc(m.title)}</h3>${m.desc ? `<p style="font-size:0.92em">${esc(m.desc)}</p>` : '<p class="note">No description in the game files.</p>'}${m.req.length ? `<p class="note" style="margin:4px 0 0">Requires: ${m.req.map(r => esc((Object.values(MD.trees).flatMap(t => t.missions).find(x => x.key === r) || {}).title || r)).join(", ")}</p>` : ""}`;
+      if (!m) return;
+      const col = (title, ls) => `<div><h4>${title}</h4>${ls?.length ? lineList(ls) : '<p class="note" style="margin:0">Nothing listed.</p>'}</div>`;
+      box.innerHTML = `<h3 style="margin-bottom:2px;display:flex;align-items:center;gap:10px">${m.icon ? `<img src="icons/missions/${m.icon}.png" alt="" width="40" height="42">` : ""}${esc(m.title)}</h3>
+        ${m.desc ? `<p style="font-size:0.92em;margin-bottom:6px">${esc(m.desc)}</p>` : ""}
+        <div class="mcols">${col("To complete", m.cond)}${col("Reward", m.reward)}</div>
+        ${m.req.length ? `<p class="note" style="margin:6px 0 0">Requires: ${m.req.map(r => esc((all.find(x => x.key === r) || {}).title || r)).join(", ")}</p>` : ""}
+        <p class="note" style="margin:6px 0 0">Worded from the game's scripts, which the game itself turns into text in code: most lines are plain, a few keep the script's own words.</p>`;
     }
     const modIcon = m => m.icon ? `<img class="mi" src="icons/mods/${m.key}.png" alt="">` : "";
     const modText = m => m.flag ? esc(m.label) : `${m.value > 0 ? "+" : ""}${m.kind === "percent" ? Math.round(m.value * 1000) / 10 + "%" : Math.round(m.value * 100) / 100} ${esc(m.label)}`;

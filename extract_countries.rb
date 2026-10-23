@@ -301,6 +301,33 @@ series_list.each do |s|
   positive_tags(s[:potential]).uniq.select { |t| tags_present.include?(t) && holds?(s[:potential], t) }.each { |t| by_tag_series[t] << s }
 end
 
+# EU4 has no table saying how a modifier's number is shown, so which are percentages is a
+# best guess: the names the game uses for flat amounts are listed, and fractions are percentages.
+FLAT_MODIFIER = /\A(yearly_|monthly_)|diplomats|merchants|colonists|missionaries|diplomatic_reputation|tolerance|unrest|_tradition\z|\Alegitimacy|devotion|horde_unity|free_leader_pool|\Aleader_|prestige\z|absolutism|governing_capacity|forcelimit\z|war_exhaustion|\Adiplomatic_upkeep|\Aambition|\Aprovince_warscore_cost|\Aembargo|\Aspy_offence|\Afabricate|\Aallowed_|\Aprofessionalism|\Acan_|\Amay_|\Anum_|\Aimproved|\Aunjustified_demands|\Aaccept_vassalization|\Aglobal_ship_recruit|\Aadministrative_efficiency\z|\Aland_attrition|\Anaval_attrition|\Amax_|\A.*_slots?\z/
+
+# Event modifiers (what a mission's add_country_modifier gives), the map's areas and regions, and the
+# worded mission conditions and rewards (mission_text.rb).
+require_relative "mission_text"
+event_modifiers = {}
+Dir[File.join(GAME, "common/event_modifiers/*.txt")].each do |f|
+  parse(read(f)).each do |key, body|
+    next unless key && body.is_a?(Array)
+
+    event_modifiers[key] = body.filter_map { |k, v| [ k, v ] if k && v.is_a?(String) && v.match?(/\A-?[\d.]+\z/) }
+  end
+end
+place_keys = %w[area region superregion continent provincegroup].flat_map do |file|
+  path = File.join(GAME, "map/#{file}.txt")
+  File.exist?(path) ? parse(read(path)).filter_map { |k, v| k if k && v.is_a?(Array) } : []
+end.to_set
+modifier_text = lambda do |key, value|
+  v = value.to_f
+  label = name_of(key) || name_of("modifier_#{key}") || key.tr("_", " ").capitalize
+  percent = !key.match?(FLAT_MODIFIER) && v.abs < 1
+  "#{v.positive? ? '+' : ''}#{percent ? "#{(v * 100).round(1).to_s.sub(/\.0\z/, '')}%" : v.to_s.sub(/\.0\z/, '')} #{label}"
+end
+MT = MissionText.new(names: NAMES, mods: event_modifiers, areas: place_keys, countries: tags_present, label: modifier_text)
+
 trees = {}
 by_tag = {}
 by_tag_series.each do |tag, owned|
@@ -309,7 +336,7 @@ by_tag_series.each do |tag, owned|
     trees[id] ||= begin
       nodes = group.flat_map { |s| s[:nodes] }.uniq { |k, _| k }
       place = layout(nodes)
-      { slot: slot, missions: nodes.map { |k, v| { key: k, title: name_of("#{k}_title") || k.tr("_", " ").capitalize, desc: name_of("#{k}_desc"), icon: get(v, "icon"), **place[k] } } }
+      { slot: slot, missions: nodes.map { |k, v| { key: k, title: name_of("#{k}_title") || k.tr("_", " ").capitalize, desc: name_of("#{k}_desc"), icon: get(v, "icon"), cond: MT.conditions(get(v, "trigger")), reward: MT.rewards(get(v, "effect")), **place[k] } } }
     end
     id
   end
@@ -320,9 +347,6 @@ by_tag_count = by_tag.size
 puts "Wrote missions.json: #{trees.size} mission trees for #{by_tag.size} countries, #{trees.values.sum { |t| t[:missions].size }} missions (#{File.size(File.join(__dir__, 'missions.json')) / 1024} KB)"
 
 # --- National ideas: <TAG>_ideas with traditions (start), ambition (bonus) and seven ideas -------------------
-# EU4 has no table saying how a modifier's number is shown, so which are percentages is a
-# best guess: the names the game uses for flat amounts are listed, and fractions are percentages.
-FLAT_MODIFIER = /\A(yearly_|monthly_)|diplomats|merchants|colonists|missionaries|diplomatic_reputation|tolerance|unrest|_tradition\z|\Alegitimacy|devotion|horde_unity|free_leader_pool|\Aleader_|prestige\z|absolutism|governing_capacity|forcelimit\z|war_exhaustion|\Adiplomatic_upkeep|\Aambition|\Aprovince_warscore_cost|\Aembargo|\Aspy_offence|\Afabricate|\Aallowed_|\Aprofessionalism|\Acan_|\Amay_|\Anum_|\Aimproved|\Aunjustified_demands|\Aaccept_vassalization|\Aglobal_ship_recruit|\Aadministrative_efficiency\z|\Aland_attrition|\Anaval_attrition|\Amax_|\A.*_slots?\z/
 
 def idea_modifiers(block)
   block.filter_map do |k, v|
@@ -374,6 +398,7 @@ mission_icons = trees.values.flat_map { |t| t[:missions].map { |m| m[:icon] } }.
 made_mission = mission_icons.count { |i| sprites[i] && convert.call(File.join(GAME, sprites[i]), File.join(ICON_DIR, "missions", "#{i}.png")) }
 mod_keys = ideas.values.uniq.flat_map { |g| (g[:start] + g[:bonus] + g[:ideas].flat_map { |i| i[:mods] }).map { |m| m[:key] } }.uniq
 made_mods = mod_keys.count { |k| convert.call(File.join(GAME, "gfx/interface/ideas_EU4/#{k}.dds"), File.join(ICON_DIR, "mods", "#{k}.png")) }
+puts "Mission text keys left generic (#{MT.unknown.values.sum} uses): #{MT.unknown.sort_by { |_, c| -c }.first(60).map { |k, c| "#{k}:#{c}" }.join(" ")}"
 puts "Icons: #{made_mission} of #{mission_icons.size} mission icons, #{made_mods} of #{mod_keys.size} modifier icons"
 # Only the icons that exist are named in the data, so the page never asks for a missing file.
 trees.each_value { |t| t[:missions].each { |m| m.delete(:icon) unless File.exist?(File.join(ICON_DIR, "missions", "#{m[:icon]}.png")) } }
