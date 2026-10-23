@@ -87,6 +87,9 @@
     .srow .sname { color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .srow .stype { color: var(--muted); font-size: 0.8em; }
     .srow .sdev { font-variant-numeric: tabular-nums; min-width: 2.2em; text-align: right; }
+    ul.plain { list-style: none; margin: 0; padding: 0; font-size: 0.9em; }
+    ul.plain li { padding: 1px 0; }
+    .card h4 { margin: 10px 0 2px; font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: normal; }
     .cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
     .tags a, a.tagl { color: var(--accent); cursor: pointer; text-decoration: none; }
     .tags a:hover, a.tagl:hover { text-decoration: underline; }
@@ -193,7 +196,7 @@
       administrative_efficiency: "Administrative efficiency", development_cost_modifier: "Development cost" };
     const PERCENT = /efficiency|modifier|maintenance/;
     const state = { tab: "units", group: "western", compare: ["western", "eastern", "ottoman", "muslim"], tag: null, section: "overview", date: null };
-    let CD = null, MD = null, ID = null, cBy = {}; // countries, missions and ideas data
+    let CD = null, MD = null, ID = null, FD = null, cBy = {}; // countries, missions and ideas data
     let D, NAMES;
 
     // Compared groups get colours by their place in the selection, so no two clash.
@@ -371,6 +374,32 @@
     }
     const loadJson = url => fetch(url).then(r => { if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`); return r.json(); });
 
+    const num = (v, d = 0) => v == null ? "–" : Number(v).toLocaleString("en", { maximumFractionDigits: d, minimumFractionDigits: d });
+    const unitName = k => FD?.units[k]?.name || nm(k);
+    // The save was made on the first day of the default start, so it only speaks for that date.
+    const forcesFor = c => FD && state.date === CD.dates[0] ? FD.countries[c.tag] : null;
+    function forcesHtml(f) {
+      const kinds = { infantry: 0, cavalry: 0, artillery: 0 };
+      for (const [k, n] of Object.entries(f.regiments)) { const kind = FD.units[k]?.kind; if (kind in kinds) kinds[kind] += n; }
+      const regs = Object.entries(f.regiments).sort((a, b) => b[1] - a[1]);
+      const ships = Object.entries(f.ships).sort((a, b) => b[1] - a[1]);
+      const list = rows => rows.length ? `<ul class="plain">${rows.map(([k, n]) => `<li><b>${n}</b> × ${esc(unitName(k))}</li>`).join("")}</ul>` : '<p class="note" style="margin:0">None</p>';
+      const group = (title, units) => units.length ? `<h4>${title}</h4><ul class="plain">${units.map(u => `<li>${esc(u.name)} <span class="note">· ${esc(u.at || "at sea")} · ${u.n} ${title === "Armies" ? "regiments" : "ships"}</span></li>`).join("")}</ul>` : "";
+      const total = f.regiments ? Object.values(f.regiments).reduce((a, b) => a + b, 0) : 0, nships = Object.values(f.ships).reduce((a, b) => a + b, 0);
+      const top = Math.max(f.tax || 0, f.production || 0, f.trade || 0, f.other_income || 0, 0.01);
+      return `<div class="card"><h3>Starting forces</h3>
+          <p style="margin:0 0 6px"><b>${total}</b> regiments${total ? ` <span class="note">(${kinds.infantry} infantry · ${kinds.cavalry} cavalry · ${kinds.artillery} artillery)</span>` : ""}</p>${list(regs)}
+          ${group("Armies", f.armies)}
+          <p style="margin:10px 0 6px"><b>${nships}</b> ships</p>${list(ships)}${group("Fleets", f.fleets)}
+          <p class="note" style="margin:8px 0 0">Manpower ${num(f.manpower * 1000)} of ${num(f.max_manpower * 1000)} · sailors ${num(f.sailors)} of ${num(f.max_sailors)}</p></div>
+        <div class="card"><h3>Economy</h3>
+          <p style="margin:0 0 8px"><span class="v" style="font-size:1.5em;font-family:Georgia,serif">${num(f.income, 2)}</span> ducats a month <span class="note">· expenses ${num(f.expense, 2)} · ${f.income - f.expense >= 0 ? "+" : ""}${num((f.income || 0) - (f.expense || 0), 2)} net</span></p>
+          <div class="bars">${bar2("Tax", f.tax, top, "t")}${bar2("Production", f.production, top, "p")}${bar2("Trade", f.trade, top, "m")}${f.other_income ? bar2("Other", f.other_income, top, "") : ""}</div>
+          <dl class="facts" style="margin-top:10px"><dt>Treasury</dt><dd>${num(f.treasury, 1)} ducats${f.loan_size != null ? ` · loans up to ${f.loan_size}` : ""}</dd>
+            <dt>Prestige</dt><dd>${num(f.prestige, 1)}</dd><dt>Stability</dt><dd>${f.stability > 0 ? "+" : ""}${num(f.stability, 0)}</dd><dt>Legitimacy</dt><dd>${num(f.legitimacy, 0)}</dd>
+            <dt>Army tradition</dt><dd>${num(f.army_tradition, 1)}</dd><dt>Navy tradition</dt><dd>${num(f.navy_tradition, 1)}</dd></dl></div>`;
+    }
+    function bar2(label, value, max, cls = "") { return `<div class="bar-row"><span>${esc(label)}</span><span class="b ${cls}" style="width:${Math.max(2, 100 * (value || 0) / (max || 1))}%"></span><span>${num(value, 1)}</span></div>`; }
     const MONTHS = null;
     function bar(label, value, max, cls = "") { return `<div class="bar-row"><span>${esc(label)}</span><span class="b ${cls}" style="width:${Math.max(2, 100 * value / (max || 1))}%"></span><span>${value}</span></div>`; }
     function renderCountry() {
@@ -390,6 +419,7 @@
       if (!a) { body.innerHTML = `<p class="note">${esc(c.name)} has no provinces at this start. Pick another date on the left.</p>`; return; }
       const grp = CD.tech_groups[a.tech_group], dev = devOf(a), tot = a.tax + a.prod + a.man || 1;
       const person = (p, role) => p ? `<div class="stat"><div class="k">${role}</div><div class="v">${esc(p.name || (p.regent ? "Interregnum" : "Unnamed"))}</div><div class="s">${[p.regent ? (p.name ? "regent" : "no ruler on the throne: a regency council governs") : "", p.dynasty ? esc(p.dynasty) : "", p.born ? `born ${p.born}${state.date ? `, ${parseInt(state.date) - p.born} years old` : ""}` : ""].filter(Boolean).join(" · ")}</div>${p.adm != null ? `<div class="mana" title="administrative / diplomatic / military"><b class="a">${p.adm}</b><b class="d">${p.dip}</b><b class="m">${p.mil}</b></div><div class="s">${p.adm + p.dip + p.mil} points in total</div>` : ""}</div>` : "";
+      const f = forcesFor(c);
       const subj = a.subjects.map(x => ({ ...x, c: cBy[x.tag], a: at(cBy[x.tag]) })).sort((p, q) => devOf(q.a) - devOf(p.a));
       const subjDev = subj.reduce((n, x) => n + devOf(x.a), 0);
       const subjCard = `<div class="card" style="margin-bottom:14px"><h3>Subjects${subj.length ? ` (${subj.length})` : ""}</h3>${subj.length ? `<div class="subjects">${subj.map(x => `<div class="srow" data-tag="${x.tag}" role="button" tabindex="0">${x.c?.flag ? `<img src="flags/${x.tag}.png" alt="">` : "<span></span>"}<span class="sname">${esc(cname(x.tag))}</span><span class="stype">${esc(nm(x.type))}</span><span class="sdev" title="Total development">${x.a ? devOf(x.a) : "–"}</span></div>`).join("")}</div><p class="note" style="margin:8px 0 0">Click a subject to open its own page. Development shown is the subject's own.</p>` : `<p class="note" style="margin:0">${esc(c.name)} has no subjects at the ${dateLabel(state.date)} start.</p>`}</div>`;
@@ -400,12 +430,15 @@
           <div class="stat"><div class="k">Provinces</div><div class="v">${a.provinces}</div><div class="s">${a.cities} cities${a.hre ? ` · ${a.hre} in the HRE` : ""}</div></div>
           <div class="stat"><div class="k">Development</div><div class="v">${dev}</div><div class="s"><span style="color:var(--fire)">${a.tax} tax</span> · <span style="color:var(--shock)">${a.prod} production</span> · <span style="color:var(--morale)">${a.man} manpower</span></div></div>
           ${person(a.ruler, "Ruler")}${person(a.heir, "Heir")}
+          ${f ? `<div class="stat"><div class="k">Armies</div><div class="v">${Object.values(f.regiments).reduce((a, b) => a + b, 0)}</div><div class="s">${f.armies.length} armies · ${Object.values(f.ships).reduce((a, b) => a + b, 0)} ships in ${f.fleets.length} fleets</div></div>
+          <div class="stat"><div class="k">Monthly income</div><div class="v">${num(f.income, 1)}</div><div class="s">${num(f.treasury, 0)} ducats in the treasury</div></div>` : ""}
           <div class="stat"><div class="k">Subjects</div><div class="v">${a.subjects.length}</div><div class="s">${a.subjects.length ? `${subjDev} development more` : a.overlord ? `itself a ${esc(nm(a.overlord.type))} of ${link(a.overlord.tag)}` : "none at the start"}</div></div>
           <div class="stat"><div class="k">Capital</div><div class="v">${esc(a.capital || "–")}</div><div class="s">${esc(nm(a.government))}</div></div>
           <div class="stat"><div class="k">Technology</div><div class="v">${esc(grp ? grp.name : nm(a.tech_group))}</div><div class="s">${grp && grp.start_level != null && state.date === CD.dates[0] ? `adm, dip and mil tech all start at level ${grp.start_level} · ` : ""}<a class="tagl" data-unitgroup="${esc(grp ? grp.unit_type : a.tech_group)}">its military units</a></div></div>
         </div>
         ${subjCard}
         <div class="cols">
+          ${f ? forcesHtml(f) : ""}
           <div class="card"><h3>Development split</h3><div class="bars">${bar("Base tax", a.tax, Math.max(a.tax, a.prod, a.man), "t")}${bar("Base production", a.prod, Math.max(a.tax, a.prod, a.man), "p")}${bar("Base manpower", a.man, Math.max(a.tax, a.prod, a.man), "m")}</div><p class="note" style="margin:8px 0 0">${Math.round(100 * a.tax / tot)}% / ${Math.round(100 * a.prod / tot)}% / ${Math.round(100 * a.man / tot)}% of ${dev}.</p></div>
           <div class="card"><h3>Trade goods (by development)</h3><div class="bars">${goods || "–"}</div></div>
           <div class="card"><h3>Religions (by development)</h3><div class="bars">${faiths || "–"}</div></div>
@@ -424,7 +457,7 @@
             ${a.accepted.length ? `<dt>Accepted</dt><dd>${a.accepted.map(r => esc(nm(r))).join(", ")}</dd>` : ""}
             <dt>Religion</dt><dd>${esc(nm(a.religion))}</dd></dl></div>
         </div>
-        <p class="note" style="margin-top:12px">Armies and fleets aren't listed: the game builds each country's starting forces from its force limit when a campaign begins, rather than reading them from a file.</p>`;
+        <p class="note" style="margin-top:12px">${f ? `Armies, fleets, manpower, income and the other figures under "Starting forces" and "Economy" come from a save of ${esc(FD.date)} (${esc(FD.dlc.join(", ") || "no DLC")}); the game builds starting forces itself, so they are read from a save rather than the game files. They hold for the ${dateLabel(CD.dates[0])} start only.` : FD && state.date !== CD.dates[0] ? "Armies, fleets and the economy figures are only available for the 1444 start: they come from a save of that date." : "Armies and fleets aren't listed: the game builds starting forces itself, so they can only be read from a save."}</p>`;
     }
 
     // --- Missions and ideas (loaded when first opened) ---------------------------------------------------
@@ -484,7 +517,9 @@
     Promise.all([
       fetch("data.json?v=" + Date.now()).then(r => { if (!r.ok) throw new Error(`data.json: HTTP ${r.status}`); return r.json(); }),
       loadJson("countries.json").catch(() => null), // the tech pages work without it
-    ]).then(([data, countries]) => {
+      loadJson("forces.json").catch(() => null),    // armies, fleets and economy: from a save
+    ]).then(([data, countries, forces]) => {
+      FD = forces;
       D = data; NAMES = data.names || {};
       for (const u of D.units) NAMES[u.id] ??= u.name;
       document.getElementById("version").textContent = data.game_version ? `game ${data.game_version}` : "";

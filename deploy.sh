@@ -24,7 +24,8 @@ if [ "${1:-}" != "--code-only" ]; then
   done
   aws s3 cp data.json "s3://${bucket}/data.json" --only-show-errors \
     --cache-control "no-cache" --content-type "application/json"
-  for f in countries missions ideas; do
+  # forces.json (extract_save.rb, from a save) is optional: without it the page just leaves out armies and the economy.
+  for f in countries missions ideas $([ -f forces.json ] && echo forces); do
     gzip -9c "${f}.json" | aws s3 cp - "s3://${bucket}/${f}.json" --only-show-errors \
       --cache-control "no-cache" --content-type "application/json" --content-encoding gzip
   done
