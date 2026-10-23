@@ -464,7 +464,7 @@
             ${a.accepted.length ? `<dt>Accepted</dt><dd>${a.accepted.map(r => esc(nm(r))).join(", ")}</dd>` : ""}
             <dt>Religion</dt><dd>${esc(nm(a.religion))}</dd></dl></div>
         </div>
-        <p class="note" style="margin-top:12px">${f ? `Armies, fleets, manpower, income and the other figures under "Starting forces" and "Economy" come from a save of ${esc(FD.date)} (${esc(FD.dlc.join(", ") || "no DLC")}); the game builds starting forces itself, so they are read from a save rather than the game files. They hold for the ${dateLabel(CD.dates[0])} start only.` : FD && state.date !== CD.dates[0] ? "Armies, fleets and the economy figures are only available for the 1444 start: they come from a save of that date." : "Armies and fleets aren't listed: the game builds starting forces itself, so they can only be read from a save."}</p>`;
+        <p class="note" style="margin-top:12px">${f ? `Starting forces and economy are read from a 1444.11.11 save with every DLC, because the game builds them when a campaign starts. They apply to the ${dateLabel(CD.dates[0])} start only.` : FD && state.date !== CD.dates[0] ? "Armies, fleets and the economy are only available for the 1444 start." : "Armies and fleets aren't listed: the game builds them when a campaign starts."}</p>`;
     }
 
     // --- Missions and ideas (loaded when first opened) ---------------------------------------------------
