@@ -324,7 +324,7 @@
       writeHash();
     }
 
-    document.getElementById("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { state.tab = b.dataset.tab; render(); } });
+    document.getElementById("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { pushNext = true; state.tab = b.dataset.tab; render(); } });
     // --- Countries ----------------------------------------------------------------------------------
     // Hash: #units, #tech, #TAG, #TAG/missions, #TAG/ideas, with the start date as a last part (#FRA/overview/1492.1.1).
     function readHash() {
@@ -335,8 +335,17 @@
     }
     function writeHash() {
       const h = state.tab === "country" && state.tag ? [state.tag, state.section, state.date !== CD?.dates[0] ? state.date : ""].join("/").replace(/\/+$/, "") : state.tab === "country" ? "" : state.tab;
-      if (location.hash.slice(1) !== h) history.replaceState(null, "", h ? "#" + h : location.pathname);
+      if (location.hash.slice(1) !== h) {
+        const url = h ? "#" + h : location.pathname + location.search;
+        // A click that moves somewhere new is a history entry of its own (so Back returns to where you were,
+        // scroll position included); tidying the address after a load or a Back/Forward is not.
+        if (pushNext) { history.replaceState({ y: window.scrollY }, "", location.href); history.pushState({}, "", url); }
+        else history.replaceState(history.state, "", url);
+      }
+      pushNext = false;
     }
+    let pushNext = false;
+    history.scrollRestoration = "manual";
     const devOf = a => a ? a.tax + a.prod + a.man : 0;
     const dateLabel = d => d.split(".")[0];
     const at = c => c?.at[state.date];
@@ -355,6 +364,7 @@
       box.scrollTop = top;
     }
     function pick(tag) {
+      pushNext = true;
       state.tag = tag; state.tab = "country";
       document.getElementById("side").classList.remove("open");
       render(); window.scrollTo({ top: 0 });
@@ -459,13 +469,13 @@
 
     document.getElementById("side").addEventListener("click", e => { const r = e.target.closest("[data-tag]"); if (r) pick(r.dataset.tag); });
     document.getElementById("csearch").addEventListener("input", renderSide);
-    document.getElementById("dateSel").addEventListener("change", e => { state.date = e.target.value; render(); });
+    document.getElementById("dateSel").addEventListener("change", e => { pushNext = true; state.date = e.target.value; render(); });
     document.getElementById("pickBtn").addEventListener("click", () => document.getElementById("side").classList.toggle("open"));
     app.addEventListener("click", e => {
       const t = e.target.closest("[data-tag]"); if (t) { pick(t.dataset.tag); return; }
-      const sec = e.target.closest("[data-sec]"); if (sec) { state.section = sec.dataset.sec; render(); return; }
+      const sec = e.target.closest("[data-sec]"); if (sec) { pushNext = true; state.section = sec.dataset.sec; render(); return; }
       const m = e.target.closest("[data-m]"); if (m) { missionSel = m.dataset.m === missionSel ? null : m.dataset.m; document.querySelectorAll(".mnode").forEach(n => n.classList.toggle("sel", n.dataset.m === missionSel)); showMission(); return; }
-      const ug = e.target.closest("[data-unitgroup]"); if (ug) { if (D.groups.includes(ug.dataset.unitgroup)) state.group = ug.dataset.unitgroup; state.tab = "units"; render(); window.scrollTo({ top: 0 }); return; }
+      const ug = e.target.closest("[data-unitgroup]"); if (ug) { if (D.groups.includes(ug.dataset.unitgroup)) state.group = ug.dataset.unitgroup; pushNext = true; state.tab = "units"; render(); window.scrollTo({ top: 0 }); return; }
       const c = e.target.closest("#compare button"), g = e.target.closest("#group button");
       if (c) { const k = c.dataset.g; state.compare = state.compare.includes(k) ? state.compare.filter(x => x !== k) : [...state.compare, k]; if (!state.compare.length) state.compare = [k]; render(); }
       if (g) { state.group = g.dataset.g; render(); }
@@ -490,7 +500,12 @@
         document.querySelector(".layout").style.display = "block";
       }
       if (CD) document.getElementById("dateSel").value = state.date;
-      window.addEventListener("hashchange", () => { readHash(); if (CD) document.getElementById("dateSel").value = state.date; render(); });
+      window.addEventListener("hashchange", () => {
+        readHash(); if (CD) document.getElementById("dateSel").value = state.date; render();
+        // Back/Forward: put the page back where it was (long pages load their content a moment later).
+        const y = history.state?.y ?? 0;
+        window.scrollTo(0, y); setTimeout(() => window.scrollTo(0, y), 120);
+      });
       render();
     }).catch(e => { app.innerHTML = `<p class="err">Couldn't load the data (${esc(e.message)}). Run <code>ruby extract.rb</code> first.</p>`; });
   </script>
