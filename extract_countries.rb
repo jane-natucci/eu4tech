@@ -144,7 +144,7 @@ def person(b)
 
   adm, dip, mil = %w[adm dip mil].map { |k| get(b, k)&.to_i }
   { name: get(b, "monarch_name") || get(b, "name"), dynasty: get(b, "dynasty"), born: get(b, "birth_date")&.split(".")&.first&.to_i,
-    adm: adm, dip: dip, mil: mil }.compact
+    adm: adm, dip: dip, mil: mil, regent: get(b, "regent") == "yes" ? true : nil }.compact
 end
 
 def country_at(c, date)
