@@ -3,7 +3,7 @@
 #
 #   ./deploy.sh              full deploy: the page, the game data (data.json,
 #                            countries.json, missions.json, ideas.json) and
-#                            the flags -- run extract.rb and
+#                            the flags and icons -- run extract.rb and
 #                            extract_countries.rb first; needs a machine
 #                            with Europa Universalis IV installed
 #   ./deploy.sh --code-only  the page only, reusing the data already on S3 --
@@ -29,6 +29,8 @@ if [ "${1:-}" != "--code-only" ]; then
       --cache-control "no-cache" --content-type "application/json" --content-encoding gzip
   done
   aws s3 sync flags/ "s3://${bucket}/flags/" --delete --only-show-errors \
+    --cache-control "public, max-age=86400" --content-type "image/png"
+  aws s3 sync icons/ "s3://${bucket}/icons/" --delete --only-show-errors \
     --cache-control "public, max-age=86400" --content-type "image/png"
 fi
 # The page last, so a new page never points at data that isn't there yet.

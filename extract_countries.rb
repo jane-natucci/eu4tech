@@ -209,14 +209,20 @@ end
 
 list = result.values.select { |c| c[:at].any? }.sort_by { |c| [ -(c[:at][BOOKMARKS.first]&.then { |a| a[:tax] + a[:prod] + a[:man] } || 0), c[:name] ] }
 
-# --- Flags (128x128 TGA, kept at 48x48) ---------------------------------------------------------------
+# --- Flags: 128x128 TGAs, kept at 64x64 for the list and 128x128 for a country's page -------------------------
+FileUtils.mkdir_p(File.join(FLAGS, "big"))
 made = 0
 list.each do |c|
-  dest = File.join(FLAGS, "#{c[:tag]}.png")
+  small = File.join(FLAGS, "#{c[:tag]}.png")
+  big = File.join(FLAGS, "big", "#{c[:tag]}.png")
   src = File.join(GAME, "gfx/flags/#{c[:tag]}.tga")
+  next unless File.exist?(src)
+
   # A few of the game's 16-bit flags carry an alpha channel that is 0 everywhere: ignore it.
-  opaque = File.exist?(src) && Open3.capture3("magick", src, "-format", "%[fx:maxima.a]", "info:")[0].to_f.zero? ? [ "-alpha", "off" ] : []
-  if File.exist?(dest) || (File.exist?(src) && Open3.capture3("magick", src, *opaque, "-resize", "48x48", dest)[2].success?)
+  opaque = Open3.capture3("magick", src, "-format", "%[fx:maxima.a]", "info:")[0].to_f.zero? ? [ "-alpha", "off" ] : []
+  ok = (File.exist?(small) || Open3.capture3("magick", src, *opaque, "-filter", "Lanczos", "-resize", "64x64", small)[2].success?) &&
+       (File.exist?(big) || Open3.capture3("magick", src, *opaque, big)[2].success?)
+  if ok
     c[:flag] = true
     made += 1
   end
@@ -303,7 +309,7 @@ by_tag_series.each do |tag, owned|
     trees[id] ||= begin
       nodes = group.flat_map { |s| s[:nodes] }.uniq { |k, _| k }
       place = layout(nodes)
-      { slot: slot, missions: nodes.map { |k, v| { key: k, title: name_of("#{k}_title") || k.tr("_", " ").capitalize, desc: name_of("#{k}_desc"), **place[k] } } }
+      { slot: slot, missions: nodes.map { |k, v| { key: k, title: name_of("#{k}_title") || k.tr("_", " ").capitalize, desc: name_of("#{k}_desc"), icon: get(v, "icon"), **place[k] } } }
     end
     id
   end
@@ -352,6 +358,28 @@ Dir[File.join(GAME, "common/ideas/*.txt")].sort.each do |f|
 end
 File.write(File.join(__dir__, "ideas.json"), JSON.generate(by_tag: ideas))
 puts "Wrote ideas.json: national ideas for #{ideas.size} countries (#{File.size(File.join(__dir__, 'ideas.json')) / 1024} KB)"
+
+# --- Icons: a mission's own (interface/*.gfx names a texture for each) and a modifier's (ideas_EU4/<modifier>.dds) ----
+ICON_DIR = File.join(__dir__, "icons")
+FileUtils.mkdir_p(File.join(ICON_DIR, "missions"))
+FileUtils.mkdir_p(File.join(ICON_DIR, "mods"))
+sprites = {}
+Dir[File.join(GAME, "interface/**/*.gfx")].each do |f|
+  read(f).scan(/name\s*=\s*"([^"]+)"\s*(?:[^{}]*?)texturefile\s*=\s*"([^"]+)"/m) { |n, tf| sprites[n] ||= tf.gsub("//", "/") }
+end
+convert = lambda do |src, dest|
+  File.exist?(dest) || (File.exist?(src) && Open3.capture3("magick", src, dest)[2].success?)
+end
+mission_icons = trees.values.flat_map { |t| t[:missions].map { |m| m[:icon] } }.compact.uniq
+made_mission = mission_icons.count { |i| sprites[i] && convert.call(File.join(GAME, sprites[i]), File.join(ICON_DIR, "missions", "#{i}.png")) }
+mod_keys = ideas.values.uniq.flat_map { |g| (g[:start] + g[:bonus] + g[:ideas].flat_map { |i| i[:mods] }).map { |m| m[:key] } }.uniq
+made_mods = mod_keys.count { |k| convert.call(File.join(GAME, "gfx/interface/ideas_EU4/#{k}.dds"), File.join(ICON_DIR, "mods", "#{k}.png")) }
+puts "Icons: #{made_mission} of #{mission_icons.size} mission icons, #{made_mods} of #{mod_keys.size} modifier icons"
+# Only the icons that exist are named in the data, so the page never asks for a missing file.
+trees.each_value { |t| t[:missions].each { |m| m.delete(:icon) unless File.exist?(File.join(ICON_DIR, "missions", "#{m[:icon]}.png")) } }
+File.write(File.join(__dir__, "missions.json"), JSON.generate(trees: trees, by_tag: by_tag))
+ideas.each_value { |g| (g[:start] + g[:bonus] + g[:ideas].flat_map { |i| i[:mods] }).each { |m| m[:icon] = true if File.exist?(File.join(ICON_DIR, "mods", "#{m[:key]}.png")) } }
+File.write(File.join(__dir__, "ideas.json"), JSON.generate(by_tag: ideas))
 
 version = read(File.join(GAME, "launcher-settings.json"))[/"rawVersion":\s*"v?([^"]+)"/, 1] rescue nil
 File.write(OUT, JSON.generate(game_version: version, generated_at: Time.now.utc.iso8601, dates: BOOKMARKS, tech_groups: tech_groups, names: names, countries: list))
