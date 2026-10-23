@@ -6,7 +6,7 @@ How Europa Universalis IV's land units and technology evolve, read straight from
 - **Military units:** the strongest infantry, cavalry and artillery each unit group can recruit at every mil tech level (total pips, groups side by side), what mil tech multiplies (fire/shock damage, morale, tactics, combat width), and every unit of a group with its six pips on the mil tech axis.
 - **Adm / Dip / Mil tech:** each effect's value at every level, by the year the game expects it, plus what each level unlocks.
 
-Live at https://eu4tech.jane.berlin/ (the cog button on eu4.jane.berlin leads here; the old address https://vic3tech.jane.berlin/eu4/ redirects). A push to `main` uploads the page through GitHub Actions; the game data (`data.json`, `countries.json`, `missions.json`, `ideas.json`, `flags/`, `icons/`) only goes up from a full local deploy (`./deploy.sh`), since only a machine with EU4 installed can generate it. The page started in the [vic3tech](https://github.com/jane-natucci/vic3tech) repo and shares no code with it.
+Live at https://eu4tech.jane.berlin/ (the cog button on eu4.jane.berlin leads here). A push to `main` uploads the page through GitHub Actions; the game data (`data.json`, `countries.json`, `missions.json`, `ideas.json`, `flags/`, `icons/`) only goes up from a full local deploy (`./deploy.sh`), since only a machine with EU4 installed can generate it. The page started in the [vic3tech](https://github.com/jane-natucci/vic3tech) repo and shares no code with it.
 
 ```bash
 ruby extract.rb             # writes data.json from the default Steam install (gitignored: Paradox's data)
