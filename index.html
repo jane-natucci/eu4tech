@@ -340,7 +340,7 @@
       const list = CD.countries.filter(c => q ? (c.name + " " + c.tag).toLowerCase().includes(q) : c.at[state.date]);
       document.getElementById("sideHint").textContent = q ? `${list.length} matching (dimmed ones don't exist in ${dateLabel(state.date)})` : `${list.length} countries in ${dateLabel(state.date)}, by development`;
       const box = document.getElementById("countries"), top = box.scrollTop;
-      box.innerHTML = list.slice(0, 400).map(c => `<div class="country${c.tag === state.tag ? " pinned" : ""}${c.at[state.date] ? "" : " later"}" data-tag="${c.tag}" role="button" tabindex="0">${c.flag ? `<img src="flags/${c.tag}.png" alt="" loading="lazy">` : "<span></span>"}<span class="name">${esc(c.name)}</span><span class="count" title="Total development">${c.at[state.date] ? devOf(c.at[state.date]) : ""}</span></div>`).join("") || '<p class="note">No country matches.</p>';
+      box.innerHTML = list.map(c => `<div class="country${c.tag === state.tag ? " pinned" : ""}${c.at[state.date] ? "" : " later"}" data-tag="${c.tag}" role="button" tabindex="0">${c.flag ? `<img src="flags/${c.tag}.png" alt="" loading="lazy">` : "<span></span>"}<span class="name">${esc(c.name)}</span><span class="count" title="Total development">${c.at[state.date] ? devOf(c.at[state.date]) : ""}</span></div>`).join("") || '<p class="note">No country matches.</p>';
       box.scrollTop = top;
     }
     function pick(tag) {
