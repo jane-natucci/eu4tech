@@ -19,7 +19,7 @@ bucket="${EU4_BUCKET:-eu4tech.jane.berlin}"
 [ -n "${CI:-}" ] || export AWS_PROFILE="${AWS_PROFILE:-personal}"
 
 if [ "${1:-}" != "--code-only" ]; then
-  for f in data countries missions ideas; do
+  for f in data countries missions ideas links; do
     [ -f "${f}.json" ] || { echo "No ${f}.json -- run: ruby extract.rb && ruby extract_countries.rb" >&2; exit 1; }
   done
   aws s3 cp data.json "s3://${bucket}/data.json" --only-show-errors \
@@ -29,6 +29,9 @@ if [ "${1:-}" != "--code-only" ]; then
     gzip -9c "${f}.json" | aws s3 cp - "s3://${bucket}/${f}.json" --only-show-errors \
       --cache-control "no-cache" --content-type "application/json" --content-encoding gzip
   done
+  # links.json (country name -> tag and start date) is read by other apps that link to this site.
+  aws s3 cp links.json "s3://${bucket}/links.json" --only-show-errors \
+    --cache-control "public, max-age=3600" --content-type "application/json"
   aws s3 sync flags/ "s3://${bucket}/flags/" --delete --only-show-errors \
     --cache-control "public, max-age=86400" --content-type "image/png"
   aws s3 sync icons/ "s3://${bucket}/icons/" --delete --only-show-errors \

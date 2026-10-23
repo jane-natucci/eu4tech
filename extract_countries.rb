@@ -381,6 +381,19 @@ File.write(File.join(__dir__, "missions.json"), JSON.generate(trees: trees, by_t
 ideas.each_value { |g| (g[:start] + g[:bonus] + g[:ideas].flat_map { |i| i[:mods] }).each { |m| m[:icon] = true if File.exist?(File.join(ICON_DIR, "mods", "#{m[:key]}.png")) } }
 File.write(File.join(__dir__, "ideas.json"), JSON.generate(by_tag: ideas))
 
+# --- links.json: country name -> [tag, the first start date it exists at], for other pages that mention
+# countries by name and want to link here (the date opens the right start: the USA only exists from 1776).
+# Aliases cover how achievements and other texts say a country's name.
+ALIASES = { "USA" => "USA", "Papacy" => "PAP", "Ottoman Empire" => "TUR" }.freeze
+link_names = {}
+list.each do |c|
+  first = BOOKMARKS.find { |d| c[:at][d] }
+  link_names[c[:name]] ||= [ c[:tag], first ] if first
+end
+ALIASES.each { |name, tag| (c = list.find { |x| x[:tag] == tag }) && (first = BOOKMARKS.find { |d| c[:at][d] }) && link_names[name] = [ tag, first ] }
+File.write(File.join(__dir__, "links.json"), JSON.generate(default_date: BOOKMARKS.first, names: link_names))
+puts "Wrote links.json: #{link_names.size} names"
+
 version = read(File.join(GAME, "launcher-settings.json"))[/"rawVersion":\s*"v?([^"]+)"/, 1] rescue nil
 File.write(OUT, JSON.generate(game_version: version, generated_at: Time.now.utc.iso8601, dates: BOOKMARKS, tech_groups: tech_groups, names: names, countries: list))
 puts "Wrote #{list.size} countries across #{BOOKMARKS.size} dates (#{BOOKMARKS.join(', ')}); flags: #{made}"
