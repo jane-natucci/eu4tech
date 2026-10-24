@@ -136,6 +136,7 @@ pages.each do |c|
   url = "#{SITE}/country/#{c["slug"]}"
   html = retag(template, title: title, description: description(c), url: url)
   html = html.sub("<!--seo:about-->", block)
+  html = html.sub("<head>", %(<head>\n  <base href="/">)) # the app loads its data and pictures by relative address, which must not resolve under /country/ or /culture/
   html = html.sub("<!--seo:head-->", %(<meta name="initial-tag" content="#{c["tag"]}">\n  <meta name="initial-date" content="#{c["date"]}">\n  ) + ld({
     "@context" => "https://schema.org", "@type" => "WebPage", "name" => title, "url" => url,
     "description" => description(c), "inLanguage" => "en",
