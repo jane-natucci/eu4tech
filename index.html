@@ -12,11 +12,40 @@
   <meta property="og:title" content="EU4 Tech – Countries, Mission Trees, National Ideas and Unit Pips">
   <meta property="og:description" content="Every EU4 country at each start date, its national ideas and mission trees, plus unit pips by military tech and what adm, dip and mil tech add — straight from the game files.">
   <meta property="og:url" content="https://eu4tech.jane.berlin/">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:site_name" content="EU4 Tech">
+  <meta property="og:image" content="https://eu4tech.jane.berlin/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The EU4 Tech country page for France at the 1444 start, with its national ideas">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU4 Tech – Countries, Mission Trees, National Ideas and Unit Pips">
   <meta name="twitter:description" content="Every EU4 land unit's pips by military tech level, unit groups side by side, and what each adm, dip and mil tech adds.">
+  <meta name="twitter:image" content="https://eu4tech.jane.berlin/og-image.jpg">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "EU4 Tech",
+      "url": "https://eu4tech.jane.berlin/",
+      "description": "Every Europa Universalis IV country at each start date: rulers and their monarch points, provinces and development, rivals, allies and subjects, national ideas, mission trees, and unit pips by military tech, read from the game files.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Any",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "about": { "@type": "VideoGame", "name": "Europa Universalis IV" },
+      "author": { "@type": "Person", "name": "Jane Natucci", "url": "https://jane.berlin/" }
+    }
+  </script>
+  <!--seo:head-->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23f4efe4' stroke='%238a2c1f' stroke-width='2'/%3E%3Cdefs%3E%3Cg id='sword' fill='%238a2c1f'%3E%3Cpath d='M16 5.2l1.7 3v11.2h-3.4V8.2z'/%3E%3Crect x='11.4' y='19.4' width='9.2' height='1.9' rx='.9'/%3E%3Crect x='15.1' y='21.3' width='1.8' height='4.2'/%3E%3Ccircle cx='16' cy='26.4' r='1.5'/%3E%3C/g%3E%3C/defs%3E%3Cg transform='translate(16.05 15.4) scale(1.1) translate(-16 -16)'%3E%3Cuse href='%23sword' transform='rotate(45 16 16)'/%3E%3Cuse href='%23sword' transform='rotate(-45 16 16)' stroke='%23f4efe4' stroke-width='.7' paint-order='stroke'/%3E%3C/g%3E%3C/svg%3E">
   <style>
+    /* The plain-text summary of the open country, for people and search engines that read the page's own text. */
+    .seo-about { padding: 12px 20px 4px; font-size: 0.82em; line-height: 1.5; color: var(--muted); border-top: 1px solid var(--line); }
+    .seo-about summary { cursor: pointer; color: var(--ink); margin-bottom: 6px; }
+    .seo-about p { margin: 0 0 6px; max-width: 110ch; }
+    .seo-about a { color: var(--accent); }
     :root {
       color-scheme: light;
       --bg: #f4efe4; --panel: #fbf8f1; --ink: #231d14; --muted: #7a6d58; --line: #d9cfbc;
@@ -183,6 +212,7 @@
     </aside>
     <main id="app"></main>
   </div>
+  <!--seo:about-->
   <footer>Unofficial fan page. Data comes from the Europa Universalis IV game files<span id="footVersion"></span>; Europa Universalis IV is © Paradox Interactive.</footer>
 
   <script>
@@ -337,7 +367,10 @@
     // --- Countries ----------------------------------------------------------------------------------
     // Hash: #units, #tech, #TAG, #TAG/missions, #TAG/ideas, with the start date as a last part (#FRA/overview/1492.1.1).
     function readHash() {
-      const [a, sec, date] = decodeURIComponent(location.hash.slice(1)).split("/");
+      const [hashTag, sec, hashDate] = decodeURIComponent(location.hash.slice(1)).split("/");
+      // A country's own address (/country/france) opens on it, at the first start where it exists.
+      const meta = n => document.querySelector(`meta[name="${n}"]`)?.content;
+      const a = hashTag || meta("initial-tag"), date = hashTag ? hashDate : meta("initial-date");
       if (a === "units" || a === "tech") state.tab = a;
       else if (a && cBy[a]) { state.tab = "country"; state.tag = a; state.section = ["overview", "missions", "ideas"].includes(sec) ? sec : "overview"; }
       if (CD) state.date = date && CD.dates.includes(date) ? date : CD.dates[0];
