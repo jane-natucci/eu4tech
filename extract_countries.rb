@@ -171,14 +171,16 @@ end.to_h { |c| [ c[:tag], c ] }
 
 BOOKMARKS.each do |date|
   owned = Hash.new { |h, k| h[k] = [] }
+  city_names = {} # a province's own name changes over the centuries (history/provinces sets `capital = "Philadelphia"`)
   provinces.each do |p|
     s = province_at(p, date)
+    city_names[p[:id]] = s["capital"] if s["capital"]
     owned[s["owner"]] << { id: p[:id], tax: s["base_tax"].to_i, prod: s["base_production"].to_i, man: s["base_manpower"].to_i,
                            goods: s["trade_goods"], religion: s["religion"], culture: s["culture"], city: s["is_city"] == "yes", hre: s["hre"] == "yes" } if s["owner"]
   end
   limit = date_key(date)
   active = ties.select { |t| (t[:from] <=> limit) <= 0 && (t[:to].nil? || (t[:to] <=> limit).positive?) }
-  prov_name = ->(id) { name_of("PROV#{id}") || "Province #{id}" }
+  prov_name = ->(id) { city_names[id] || name_of("PROV#{id}") || "Province #{id}" }
 
   owned.each do |tag, provs|
     entry = result[tag] or next
